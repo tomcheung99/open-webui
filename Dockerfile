@@ -38,6 +38,11 @@ RUN apk add --no-cache git
 COPY package.json package-lock.json ./
 RUN npm ci --force
 
+# Pre-copy pyodide core files from node_modules into static/pyodide/.
+# This lets prepare-pyodide.js detect the correct version and skip the
+# memory-intensive loadPyodide() WebAssembly step during Docker build.
+RUN cp -r node_modules/pyodide/. static/pyodide/
+
 COPY . .
 ENV APP_BUILD_HASH=${BUILD_HASH}
 RUN npm run build

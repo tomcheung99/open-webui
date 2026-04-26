@@ -196,6 +196,27 @@ async function downloadPyPIWheels() {
 }
 
 initNetworkProxyFromEnv();
-await downloadPackages();
-await copyPyodide();
+
+// If pyodide core files were pre-copied from node_modules (e.g. during Docker build),
+// static/pyodide/package.json will already exist with the correct version.
+// In that case we skip the memory-intensive loadPyodide() + micropip.install() step
+// and only run downloadPyPIWheels() which is lightweight and has skip-if-exists logic.
+const { dependencies } = JSON.parse(await readFile('package.json'));
+const requiredPyodideVersion = dependencies.pyodide.replace('^', '');
+
+let alreadyPrepared = false;
+try {
+	const existing = JSON.parse(await readFile('static/pyodide/package.json'));
+	if (existing.version === requiredPyodideVersion) {
+		console.log(`Pyodide ${requiredPyodideVersion} already present, skipping download and copy`);
+		alreadyPrepared = true;
+	}
+} catch {
+	// static/pyodide/package.json not found – need to download
+}
+
+if (!alreadyPrepared) {
+	await downloadPackages();
+	await copyPyodide();
+}
 await downloadPyPIWheels();
