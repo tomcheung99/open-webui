@@ -41,7 +41,7 @@ RUN npm ci --force
 # Pre-copy pyodide core files from node_modules into static/pyodide/.
 # This lets prepare-pyodide.js detect the correct version and skip the
 # memory-intensive loadPyodide() WebAssembly step during Docker build.
-RUN cp -r node_modules/pyodide/. static/pyodide/
+RUN mkdir -p static/pyodide && cp -r node_modules/pyodide/. static/pyodide/
 
 COPY . .
 ENV APP_BUILD_HASH=${BUILD_HASH}
