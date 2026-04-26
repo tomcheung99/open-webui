@@ -197,22 +197,18 @@ async function downloadPyPIWheels() {
 
 initNetworkProxyFromEnv();
 
-// If pyodide core files were pre-copied from node_modules (e.g. during Docker build),
-// static/pyodide/package.json will already exist with the correct version.
-// In that case we skip the memory-intensive loadPyodide() + micropip.install() step
-// and only run downloadPyPIWheels() which is lightweight and has skip-if-exists logic.
-const { dependencies } = JSON.parse(await readFile('package.json'));
-const requiredPyodideVersion = dependencies.pyodide.replace('^', '');
-
+// During Docker builds, the Dockerfile pre-copies node_modules/pyodide into
+// static/pyodide/ and creates a .docker-prepared sentinel file.
+// Detecting this sentinel lets us skip the OOM-prone loadPyodide() WebAssembly
+// step entirely — version string comparison is intentionally avoided because
+// npm may resolve a newer patch (e.g. ^0.28.2 → 0.28.3) causing false mismatches.
 let alreadyPrepared = false;
 try {
-	const existing = JSON.parse(await readFile('static/pyodide/package.json'));
-	if (existing.version === requiredPyodideVersion) {
-		console.log(`Pyodide ${requiredPyodideVersion} already present, skipping download and copy`);
-		alreadyPrepared = true;
-	}
+	await access('static/pyodide/.docker-prepared');
+	console.log('Pyodide pre-populated by Dockerfile, skipping download and copy');
+	alreadyPrepared = true;
 } catch {
-	// static/pyodide/package.json not found – need to download
+	// Sentinel not found (local dev) — fall through to normal download logic
 }
 
 if (!alreadyPrepared) {
