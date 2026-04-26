@@ -9,6 +9,7 @@
 	import { settings, toolServers, terminalServers } from '$lib/stores';
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
+	import Switch from '$lib/components/common/Switch.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import Connection from './Tools/Connection.svelte';
@@ -22,6 +23,8 @@
 	let terminalServerConfigs: { url: string; key: string; name?: string; enabled: boolean }[] = [];
 	let showConnectionModal = false;
 
+	let autoToolsExecution = true;
+
 	const addConnectionHandler = async (server) => {
 		servers = [...servers, server];
 		await updateHandler();
@@ -30,7 +33,8 @@
 	const updateHandler = async () => {
 		await saveSettings({
 			toolServers: servers,
-			terminalServers: terminalServerConfigs
+			terminalServers: terminalServerConfigs,
+			autoToolsExecution: autoToolsExecution
 		});
 
 		let toolServersData = await getToolServersData($settings?.toolServers ?? []);
@@ -68,6 +72,7 @@
 	onMount(async () => {
 		servers = $settings?.toolServers ?? [];
 		terminalServerConfigs = $settings?.terminalServers ?? [];
+		autoToolsExecution = $settings?.autoToolsExecution ?? true;
 	});
 </script>
 
@@ -133,6 +138,37 @@
 							href="https://github.com/open-webui/openapi-servers"
 							target="_blank">{$i18n.t('Learn more about OpenAPI tool servers.')} ↗</a
 						>
+					</div>
+				</div>
+
+				<hr class="border-gray-100/50 dark:border-gray-850/50 my-4" />
+
+				<div class="pr-1.5">
+					<div class="flex w-full justify-between items-center">
+						<div class=" self-center text-sm font-medium">
+							{$i18n.t('Enable Auto Tools Execution')}
+						</div>
+
+						<Tooltip
+							content={autoToolsExecution ? $i18n.t('Enabled') : $i18n.t('Disabled')}
+						>
+							<Switch
+								bind:state={autoToolsExecution}
+								on:change={async () => {
+									await updateHandler();
+								}}
+							/>
+						</Tooltip>
+					</div>
+
+					<div class="mt-1.5">
+						<div
+							class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+						>
+							{$i18n.t(
+								'Automatically run tools and MCP calls requested by the model without asking for confirmation.'
+							)}
+						</div>
 					</div>
 				</div>
 

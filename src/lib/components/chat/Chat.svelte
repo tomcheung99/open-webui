@@ -344,6 +344,27 @@
 				selectedToolIds = selectedToolIds.filter((id) => !id.startsWith('direct_server:'));
 			}
 
+			// Auto Tools Execution: when enabled, auto-select every available tool
+			// (built-in tools + OpenAPI/MCP direct servers) for new chats so that
+			// plugin/MCP tools are turned on without requiring manual selection.
+			if ($settings?.autoToolsExecution) {
+				const autoIds = new Set(selectedToolIds);
+
+				for (const tool of ($tools ?? []) as any[]) {
+					if (tool?.authenticated === false) continue;
+					autoIds.add(tool.id);
+				}
+
+				const servers = ($toolServers ?? []) as any[];
+				for (let serverIdx = 0; serverIdx < servers.length; serverIdx++) {
+					if (servers[serverIdx]?.info) {
+						autoIds.add(`direct_server:${serverIdx}`);
+					}
+				}
+
+				selectedToolIds = [...autoIds];
+			}
+
 			// Set Default Filters (Toggleable only)
 			if (model?.info?.meta?.defaultFilterIds) {
 				selectedFilterIds = model.info.meta.defaultFilterIds.filter((id) =>
