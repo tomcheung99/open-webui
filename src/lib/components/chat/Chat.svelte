@@ -282,6 +282,35 @@
 		onSelectedModelIdsChange();
 	}
 
+	// Re-apply Auto Tools Execution whenever the setting flips, the tool list
+	// loads, or new tool servers become available — even on an already-open chat.
+	$: if ($settings?.autoToolsExecution && ($tools || $toolServers)) {
+		applyAutoToolsExecution();
+	}
+
+	const applyAutoToolsExecution = () => {
+		if (!$settings?.autoToolsExecution) return;
+
+		const autoIds = new Set(selectedToolIds);
+		const before = autoIds.size;
+
+		for (const tool of (($tools as unknown as any[]) ?? [])) {
+			if (tool?.authenticated === false) continue;
+			autoIds.add(tool.id);
+		}
+
+		const servers = (($toolServers as unknown as any[]) ?? []);
+		for (let serverIdx = 0; serverIdx < servers.length; serverIdx++) {
+			if (servers[serverIdx]?.info) {
+				autoIds.add(`direct_server:${serverIdx}`);
+			}
+		}
+
+		if (autoIds.size !== before) {
+			selectedToolIds = [...autoIds];
+		}
+	};
+
 	const onSelectedModelIdsChange = () => {
 		resetInput();
 		oldSelectedModelIds = structuredClone(selectedModelIds);
@@ -347,23 +376,7 @@
 			// Auto Tools Execution: when enabled, auto-select every available tool
 			// (built-in tools + OpenAPI/MCP direct servers) for new chats so that
 			// plugin/MCP tools are turned on without requiring manual selection.
-			if ($settings?.autoToolsExecution) {
-				const autoIds = new Set(selectedToolIds);
-
-				for (const tool of ($tools ?? []) as any[]) {
-					if (tool?.authenticated === false) continue;
-					autoIds.add(tool.id);
-				}
-
-				const servers = ($toolServers ?? []) as any[];
-				for (let serverIdx = 0; serverIdx < servers.length; serverIdx++) {
-					if (servers[serverIdx]?.info) {
-						autoIds.add(`direct_server:${serverIdx}`);
-					}
-				}
-
-				selectedToolIds = [...autoIds];
-			}
+			applyAutoToolsExecution();
 
 			// Set Default Filters (Toggleable only)
 			if (model?.info?.meta?.defaultFilterIds) {
