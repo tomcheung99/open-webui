@@ -28,12 +28,17 @@ class ExternalReranker(BaseReranker):
         query = sentences[0][0]
         docs = [i[1] for i in sentences]
 
+        # VoyageAI uses `top_k`; OpenAI/Cohere-compatible APIs use `top_n`.
+        is_voyageai = 'voyageai.com' in self.url.lower()
         payload = {
             'model': self.model,
             'query': query,
             'documents': docs,
-            'top_n': len(docs),
         }
+        if is_voyageai:
+            payload['top_k'] = len(docs)
+        else:
+            payload['top_n'] = len(docs)
 
         try:
             log.info(f'ExternalReranker:predict:model {self.model}')
@@ -55,6 +60,11 @@ class ExternalReranker(BaseReranker):
                 verify=REQUESTS_VERIFY,
             )
 
+            if not r.ok:
+                log.error(
+                    f'ExternalReranker:predict HTTP {r.status_code} from {self.url} '
+                    f'model={self.model} body={r.text[:500]}'
+                )
             r.raise_for_status()
             data = r.json()
 
