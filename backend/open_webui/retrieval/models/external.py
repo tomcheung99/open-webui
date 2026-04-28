@@ -58,8 +58,10 @@ class ExternalReranker(BaseReranker):
             r.raise_for_status()
             data = r.json()
 
-            if 'results' in data:
-                sorted_results = sorted(data['results'], key=lambda x: x['index'])
+            # Support both "results" (OpenAI-compatible) and "data" (VoyageAI) response formats
+            items = data.get('results') or data.get('data')
+            if items:
+                sorted_results = sorted(items, key=lambda x: x['index'])
                 return [result['relevance_score'] for result in sorted_results]
             else:
                 log.error('No results found in external reranking response')
